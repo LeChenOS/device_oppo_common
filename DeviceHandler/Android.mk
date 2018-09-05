@@ -47,10 +47,8 @@ LOCAL_RESOURCE_DIR := $(package_resource_overlays) $(LOCAL_RESOURCE_DIR)
 
 LOCAL_PROGUARD_ENABLED := disabled
 LOCAL_DEX_PREOPT := false
-LOCAL_JAVA_LIBRARIES := telephony-common
 LOCAL_MODULE_PATH := $(TARGET_OUT)/app
-
-include frameworks/base/packages/SettingsLib/common.mk
+LOCAL_PRIVATE_PLATFORM_APIS := true
 
 include $(BUILD_PACKAGE)
 

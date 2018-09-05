@@ -23,8 +23,7 @@
 
         <activity
             android:name=".settings.ScreenOffGestureSettings"
-            android:label="@string/screen_off_gesture_title"
-            android:theme="@style/DeviceHandlerTheme">
+            android:label="@string/screen_off_gesture_title">
           <intent-filter>
                 <action android:name="com.android.settings.action.EXTRA_SETTINGS" />
           </intent-filter>
@@ -40,7 +39,6 @@
 
          <activity
             android:name=".settings.DeviceSettingsActivity"
-            android:theme="@style/AppTheme"
             android:label="@string/device_settings"
             android:launchMode="singleTask" >  
             <intent-filter>
