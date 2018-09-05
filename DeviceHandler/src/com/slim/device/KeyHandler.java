@@ -44,6 +44,8 @@ import com.android.internal.os.DeviceKeyHandler;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.aospextended.ActionConstants;
 import com.android.internal.util.aospextended.Action;
+import android.content.Intent;
+import android.content.IntentFilter;
 
 public class KeyHandler implements DeviceKeyHandler {
 
@@ -96,6 +98,8 @@ public class KeyHandler implements DeviceKeyHandler {
     private WakeLock mGestureWakeLock;
     private Handler mHandler;
     private int mCurrentPosition;
+    private boolean mProxyIsNear;
+    private boolean mUseProxiCheck;
 
     public KeyHandler(Context context) {
         mContext = context;
@@ -177,6 +181,29 @@ public class KeyHandler implements DeviceKeyHandler {
             Action.processAction(mContext, action, false);
         }
     }
+
+
+
+    private SensorEventListener mProximitySensor = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            mProxyIsNear = event.values[0] < mSensor.getMaximumRange();
+            if (DEBUG) Log.d(TAG, "mProxyIsNear = " + mProxyIsNear);
+            if(Utils.fileWritable(FPC_CONTROL_PATH)) {
+                Utils.writeValue(FPC_CONTROL_PATH, mProxyIsNear ? "1" : "0");
+      }
+   }
+      @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+      }
+  };
+
+
+    public void update() {
+            mUseProxiCheck = Settings.System.getIntForUser(
+                    mContext.getContentResolver(), Settings.System.DEVICE_PROXI_CHECK_ENABLED, 1,
+                    UserHandle.USER_CURRENT) == 1;
+       }
 
     private void doHapticFeedback() {
         if (mVibrator == null) {
@@ -314,5 +341,25 @@ public class KeyHandler implements DeviceKeyHandler {
             mNoMan.setZenMode(Global.ZEN_MODE_NO_INTERRUPTIONS, null, TAG);
         }
    }
+
+
+    @Override
+    public Intent isActivityLaunchEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_UP) {
+            return null;
+        }
+        return null;
+    }
+
+  @Override
+    public boolean isDisabledKeyEvent(KeyEvent event) {
+        boolean isProxyCheckRequired = mUseProxiCheck &&
+                ArrayUtils.contains(sProxiCheckedGestures, event.getScanCode());
+        if (mProxyIsNear && isProxyCheckRequired) {
+            if (DEBUG) Log.i(TAG, "isDisabledKeyEvent: blocked by proxi sensor - scanCode=" + event.getScanCode());
+            return true;
+        }
+        return false;
+    }
 
 }
