@@ -78,4 +78,7 @@
         <string name="dci_mode_summary"></string>
         <string name="dci_mode_title">Wide color gammut mode</string>
 
+    <string name="proxi_summary_head">Check proximity sensor for handling gesture and fingerprint sensor</string>
+    <string name="proxi_title_head">Proximity check</string>
+
 </resources>

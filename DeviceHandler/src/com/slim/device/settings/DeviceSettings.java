@@ -16,6 +16,7 @@
 
 package com.slim.device.settings;
 
+import android.content.res.Resources;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.res.Resources;
@@ -31,6 +32,7 @@ import com.slim.device.util.FileUtils;
 import android.util.Log;
 import android.text.TextUtils;
 import android.provider.Settings;
+import android.preference.PreferenceActivity;
 import android.support.v14.preference.PreferenceFragment;
 import android.support.v7.preference.ListPreference;
 import android.support.v7.preference.Preference;
@@ -56,7 +58,7 @@ public class DeviceSettings extends PreferenceFragment
     public static final String KEYCODE_SLIDER_BOTTOM = "slider_bottom";
     public static final String BUTTON_EXTRA_KEY_MAPPING = "/sys/devices/virtual/switch/tri-state-key/state";
     public static final String SLIDER_DEFAULT_VALUE = "4,2,0";
-
+    public static final String KEY_PROXI_SWITCH = "proxi";
 
     private TwoStatePreference mSliderSwap;
     private ListPreference mSliderModeTop;
@@ -64,6 +66,7 @@ public class DeviceSettings extends PreferenceFragment
     private ListPreference mSliderModeBottom;
     private TwoStatePreference mSRGBModeSwitch;
     private TwoStatePreference mDCIModeSwitch;
+    private TwoStatePreference mProxiSwitch;
 
 @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -103,6 +106,9 @@ public class DeviceSettings extends PreferenceFragment
         mDCIModeSwitch.setChecked(DCIModeSwitch.isCurrentlyEnabled(this.getContext()));
         mDCIModeSwitch.setOnPreferenceChangeListener(new DCIModeSwitch());
 
+        mProxiSwitch = (TwoStatePreference) findPreference(KEY_PROXI_SWITCH);
+        mProxiSwitch.setChecked(Settings.System.getInt(getContext().getContentResolver(),
+                Settings.System.DEVICE_PROXI_CHECK_ENABLED, 1) != 0);
 
     }
 
@@ -115,10 +121,14 @@ public class DeviceSettings extends PreferenceFragment
     }
 
 
-
     @Override
     public boolean onPreferenceChange(Preference preference, Object newValue) {
 
+        if (preference == mProxiSwitch) {
+            Settings.System.putInt(getContext().getContentResolver(),
+                    Settings.System.DEVICE_PROXI_CHECK_ENABLED, mProxiSwitch.isChecked() ? 1 : 0);
+            return true;
+        }
 
         if (preference == mSliderSwap) {
            Boolean value = (Boolean) newValue;

@@ -57,6 +57,7 @@ public class KeyHandler implements DeviceKeyHandler {
     private static final int GESTURE_REQUEST = 1;
     private static final int GESTURE_WAKELOCK_DURATION = 2000;
     private static final boolean DEBUG = true;
+    private static final String KEY_CONTROL_PATH = "/proc/s1302/virtual_key";
     private static final String FPC_CONTROL_PATH = "/sys/devices/soc/soc:fpc_fpc1020/proximity_state";
 
     // Supported scancodes
