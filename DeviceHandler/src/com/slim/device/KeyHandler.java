@@ -45,8 +45,8 @@ import com.slim.device.settings.ScreenOffGesture;
 import android.os.UserHandle;
 import com.android.internal.os.DeviceKeyHandler;
 import com.android.internal.util.ArrayUtils;
-import com.android.internal.util.aospextended.ActionConstants;
-import com.android.internal.util.aospextended.Action;
+import com.slim.device.util.ActionConstants;
+import com.slim.device.util.Action;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.text.TextUtils;
@@ -116,7 +116,6 @@ public class KeyHandler implements DeviceKeyHandler {
     private boolean mProxyIsNear;
     private boolean mUseProxiCheck;
     private Sensor mSensor;
-    private Sensor mProximitySensor;
 
     private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver() {
          @Override
@@ -150,7 +149,6 @@ public class KeyHandler implements DeviceKeyHandler {
         IntentFilter screenStateFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
         mContext.registerReceiver(mScreenStateReceiver, screenStateFilter);
-        mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         mProximityWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "ProximityWakeLock");
         mHandler = new Handler(); 
@@ -224,6 +222,21 @@ public class KeyHandler implements DeviceKeyHandler {
         }
     }
 
+     private SensorEventListener mProximitySensor = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            mProxyIsNear = event.values[0] < mSensor.getMaximumRange();
+            if (DEBUG) Log.d(TAG, "mProxyIsNear = " + mProxyIsNear);
+            if(Utils.fileWritable(FPC_CONTROL_PATH)) {
+                Utils.writeValue(FPC_CONTROL_PATH, mProxyIsNear ? "1" : "0");
+        }
+     }
+
+    @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+      }
+    };
+
     private void onDisplayOn() {
         if (mUseProxiCheck) {
             if (DEBUG) Log.d(TAG, "Display on");
@@ -287,7 +300,6 @@ public class KeyHandler implements DeviceKeyHandler {
             Message msg =  getMessageForKeyEvent(event);
             if (scanCode < KEYCODE_SLIDER_TOP && mProximitySensor != null) {
                 mEventHandler.sendMessageDelayed(msg, 200);
-                processEvent(event);
             } else if (isSliderModeSupported) {
             if (DEBUG) Log.i(TAG, "scanCode=" + event.getScanCode());
            switch(event.getScanCode()) {
@@ -338,37 +350,6 @@ public class KeyHandler implements DeviceKeyHandler {
         Message msg = mEventHandler.obtainMessage(GESTURE_REQUEST);
         msg.obj = keyEvent;
         return msg;
-    }
-
-    private void processEvent(final KeyEvent keyEvent) {
-        mProximityWakeLock.acquire();
-        mSensorManager.registerListener(new SensorEventListener() {
-
-            @Override
-            public void onSensorChanged(SensorEvent event) {
-                mProximityWakeLock.release();
-                mSensorManager.unregisterListener(this);
-                if (!mEventHandler.hasMessages(GESTURE_REQUEST)) {
-                    // The sensor took to long, ignoring.
-                    return;
-                }
-                mEventHandler.removeMessages(GESTURE_REQUEST);
-                if (event.values[0] == mProximitySensor.getMaximumRange()) {
-                    Message msg = getMessageForKeyEvent(keyEvent);
-                    mEventHandler.sendMessage(msg);
-                }
-               mProxyIsNear = event.values[0] < mSensor.getMaximumRange();
-            if (DEBUG) Log.d(TAG, "mProxyIsNear = " + mProxyIsNear);
-            if(Utils.fileWritable(FPC_CONTROL_PATH)) {
-                Utils.writeValue(FPC_CONTROL_PATH, mProxyIsNear ? "1" : "0");
-                }
-
-            }
-
-            @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
-        }, mProximitySensor, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
      private int getSliderAction(int position) {
