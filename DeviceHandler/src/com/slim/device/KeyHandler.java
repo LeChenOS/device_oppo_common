@@ -15,10 +15,13 @@
  */
 package com.slim.device;
 
+import android.database.ContentObserver;
+import android.content.BroadcastReceiver;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.ComponentName;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -46,6 +49,7 @@ import com.android.internal.util.aospextended.ActionConstants;
 import com.android.internal.util.aospextended.Action;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.text.TextUtils;
 
 public class KeyHandler implements DeviceKeyHandler {
 
@@ -53,7 +57,7 @@ public class KeyHandler implements DeviceKeyHandler {
     private static final int GESTURE_REQUEST = 1;
     private static final int GESTURE_WAKELOCK_DURATION = 2000;
     private static final boolean DEBUG = true;
-
+    private static final String FPC_CONTROL_PATH = "/sys/devices/soc/soc:fpc_fpc1020/proximity_state";
 
     // Supported scancodes
     private static final int GESTURE_CIRCLE_SCANCODE = 250;
@@ -66,6 +70,7 @@ public class KeyHandler implements DeviceKeyHandler {
      private static final int KEYCODE_SLIDER_TOP = 601;
      private static final int KEYCODE_SLIDER_MIDDLE = 602;
      private static final int KEYCODE_SLIDER_BOTTOM = 603;
+     private static final int KEY_DOUBLE_TAP = 143;
     private static final int[] sSupportedGestures = new int[]{
         GESTURE_CIRCLE_SCANCODE,
         GESTURE_SWIPE_DOWN_SCANCODE,
@@ -77,6 +82,17 @@ public class KeyHandler implements DeviceKeyHandler {
         KEYCODE_SLIDER_MIDDLE,
         KEYCODE_SLIDER_BOTTOM
     };
+
+
+     private static final int[] sProxiCheckedGestures = new int[]{
+        GESTURE_CIRCLE_SCANCODE,
+        GESTURE_SWIPE_DOWN_SCANCODE,
+        GESTURE_V_SCANCODE,
+        GESTURE_V_UP_SCANCODE,
+        GESTURE_LTR_SCANCODE,
+        GESTURE_GTR_SCANCODE,
+        KEY_DOUBLE_TAP
+     };
 
 
     private static final int[] sHandledGestures = new int[]{
@@ -92,7 +108,6 @@ public class KeyHandler implements DeviceKeyHandler {
     private Context mGestureContext = null;
     private EventHandler mEventHandler;
     private SensorManager mSensorManager;
-    private Sensor mProximitySensor;
     private Vibrator mVibrator;
     WakeLock mProximityWakeLock;
     private WakeLock mGestureWakeLock;
@@ -100,6 +115,29 @@ public class KeyHandler implements DeviceKeyHandler {
     private int mCurrentPosition;
     private boolean mProxyIsNear;
     private boolean mUseProxiCheck;
+    private Sensor mSensor;
+    private Sensor mProximitySensor;
+
+    private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver() {
+         @Override
+         public void onReceive(Context context, Intent intent) {
+             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+                 onDisplayOn();
+             } else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                 onDisplayOff();
+             }
+         }
+   };
+ 
+   private Intent createIntent(String value) {
+        ComponentName componentName = ComponentName.unflattenFromString(value);
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        intent.setComponent(componentName);
+        return intent;
+}
 
     public KeyHandler(Context context) {
         mContext = context;
@@ -107,7 +145,11 @@ public class KeyHandler implements DeviceKeyHandler {
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mNoMan = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+        mSensorManager = (SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE);
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        IntentFilter screenStateFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        mContext.registerReceiver(mScreenStateReceiver, screenStateFilter);
         mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         mProximityWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "ProximityWakeLock");
@@ -182,28 +224,44 @@ public class KeyHandler implements DeviceKeyHandler {
         }
     }
 
+    private void onDisplayOn() {
+        if (mUseProxiCheck) {
+            if (DEBUG) Log.d(TAG, "Display on");
+            mSensorManager.unregisterListener(mProximitySensor, mSensor);
+        }
+    }
 
-
-    private SensorEventListener mProximitySensor = new SensorEventListener() {
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            mProxyIsNear = event.values[0] < mSensor.getMaximumRange();
-            if (DEBUG) Log.d(TAG, "mProxyIsNear = " + mProxyIsNear);
-            if(Utils.fileWritable(FPC_CONTROL_PATH)) {
-                Utils.writeValue(FPC_CONTROL_PATH, mProxyIsNear ? "1" : "0");
-      }
+    private void onDisplayOff() {
+        if (mUseProxiCheck) {
+            if (DEBUG) Log.d(TAG, "Display off");
+            mSensorManager.registerListener(mProximitySensor, mSensor,
+                        SensorManager.SENSOR_DELAY_NORMAL);
+        }
    }
-      @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-      }
-  };
 
+    private class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
 
-    public void update() {
+        void observe() {
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.DEVICE_PROXI_CHECK_ENABLED),
+                    false, this);
+            update();
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            update();
+        }
+
+        public void update() {
             mUseProxiCheck = Settings.System.getIntForUser(
                     mContext.getContentResolver(), Settings.System.DEVICE_PROXI_CHECK_ENABLED, 1,
                     UserHandle.USER_CURRENT) == 1;
-       }
+        }
+}
 
     private void doHapticFeedback() {
         if (mVibrator == null) {
@@ -299,6 +357,12 @@ public class KeyHandler implements DeviceKeyHandler {
                     Message msg = getMessageForKeyEvent(keyEvent);
                     mEventHandler.sendMessage(msg);
                 }
+               mProxyIsNear = event.values[0] < mSensor.getMaximumRange();
+            if (DEBUG) Log.d(TAG, "mProxyIsNear = " + mProxyIsNear);
+            if(Utils.fileWritable(FPC_CONTROL_PATH)) {
+                Utils.writeValue(FPC_CONTROL_PATH, mProxyIsNear ? "1" : "0");
+                }
+
             }
 
             @Override
@@ -343,13 +407,6 @@ public class KeyHandler implements DeviceKeyHandler {
    }
 
 
-    @Override
-    public Intent isActivityLaunchEvent(KeyEvent event) {
-        if (event.getAction() != KeyEvent.ACTION_UP) {
-            return null;
-        }
-        return null;
-    }
 
   @Override
     public boolean isDisabledKeyEvent(KeyEvent event) {
@@ -362,4 +419,34 @@ public class KeyHandler implements DeviceKeyHandler {
         return false;
     }
 
+  @Override
+    public boolean isWakeEvent(KeyEvent event){
+        if (event.getAction() != KeyEvent.ACTION_UP) {
+            return false;
+        }
+        return event.getScanCode() == KEY_DOUBLE_TAP;
+    }
+
+    @Override
+    public boolean isCameraLaunchEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_UP) {
+            return false;
+        }
+        return event.getScanCode() == GESTURE_CIRCLE_SCANCODE;
+   }
+
+    @Override
+    public boolean canHandleKeyEvent(KeyEvent event) {
+        return ArrayUtils.contains(sSupportedGestures, event.getScanCode());
+    }
+
+
+
+        @Override
+    public Intent isActivityLaunchEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_UP) {
+            return null;
+        }
+        return null;
+    }
 }
