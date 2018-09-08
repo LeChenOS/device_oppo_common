@@ -58,6 +58,8 @@ public class DeviceSettings extends PreferenceFragment
     public static final String KEYCODE_SLIDER_BOTTOM = "slider_bottom";
     public static final String BUTTON_EXTRA_KEY_MAPPING = "/sys/devices/virtual/switch/tri-state-key/state";
     public static final String SLIDER_DEFAULT_VALUE = "4,2,0";
+    final String KEY_DEVICE_DOZE = "device_doze";
+    final String KEY_DEVICE_DOZE_PACKAGE_NAME = "org.lineageos.settings.doze";
     public static final String KEY_PROXI_SWITCH = "proxi";
 
     private TwoStatePreference mSliderSwap;
@@ -109,7 +111,6 @@ public class DeviceSettings extends PreferenceFragment
         mProxiSwitch = (TwoStatePreference) findPreference(KEY_PROXI_SWITCH);
         mProxiSwitch.setChecked(Settings.System.getInt(getContext().getContentResolver(),
                 Settings.System.DEVICE_PROXI_CHECK_ENABLED, 1) != 0);
-
     }
 
     private void setSummary(ListPreference preference, String file) {
@@ -120,15 +121,19 @@ public class DeviceSettings extends PreferenceFragment
         }
     }
 
-
     @Override
-    public boolean onPreferenceChange(Preference preference, Object newValue) {
-
+    public boolean onPreferenceTreeClick(Preference preference) {
         if (preference == mProxiSwitch) {
             Settings.System.putInt(getContext().getContentResolver(),
                     Settings.System.DEVICE_PROXI_CHECK_ENABLED, mProxiSwitch.isChecked() ? 1 : 0);
             return true;
         }
+        return super.onPreferenceTreeClick(preference);
+    }
+
+
+    @Override
+    public boolean onPreferenceChange(Preference preference, Object newValue) {
 
         if (preference == mSliderSwap) {
            Boolean value = (Boolean) newValue;

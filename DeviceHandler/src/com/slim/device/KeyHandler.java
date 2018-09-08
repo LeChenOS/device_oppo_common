@@ -117,6 +117,7 @@ public class KeyHandler implements DeviceKeyHandler {
     private boolean mProxyIsNear;
     private boolean mUseProxiCheck;
     private Sensor mSensor;
+    private SettingsObserver mSettingsObserver;
 
     private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver() {
          @Override
@@ -141,6 +142,8 @@ public class KeyHandler implements DeviceKeyHandler {
 
     public KeyHandler(Context context) {
         mContext = context;
+        mSettingsObserver = new SettingsObserver(mHandler);
+        mSettingsObserver.observe();
         mEventHandler = new EventHandler();
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
