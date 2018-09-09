@@ -52,11 +52,10 @@
     <string name="none">All notifications</string>
     <string name="vibrate">Vibrate</string>
     <string name="ring">Ring</string>
+    <string name="silent">Silent</string>
 
 
-
-
-    <string name="slider_mode_off">Off</string>
+    <string name="slider_mode_off">Ring</string>
     <string name="slider_mode_vibrate">Vibrate</string>
     <string name="slider_mode_silent">Silent</string>
     <string name="slider_mode_priority">Priority only</string>

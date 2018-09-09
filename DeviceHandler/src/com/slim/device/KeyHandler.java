@@ -384,10 +384,15 @@ public class KeyHandler implements DeviceKeyHandler {
             mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_VIBRATE);
         } else if (action == 2) {
             mNoMan.setZenMode(Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS, null, TAG);
+            mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_NORMAL);
         } else if (action == 3) {
             mNoMan.setZenMode(Global.ZEN_MODE_ALARMS, null, TAG);
         } else if (action == 4) {
             mNoMan.setZenMode(Global.ZEN_MODE_NO_INTERRUPTIONS, null, TAG);
+        }
+          else if (action == 5) {
+            mNoMan.setZenMode(Global.ZEN_MODE_OFF_ONLY, null, TAG);
+            mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
         }
    }
 
