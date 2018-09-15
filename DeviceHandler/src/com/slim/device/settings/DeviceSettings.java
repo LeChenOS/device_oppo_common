@@ -57,7 +57,7 @@ public class DeviceSettings extends PreferenceFragment
     public static final String KEYCODE_SLIDER_MIDDLE = "slider_middle";
     public static final String KEYCODE_SLIDER_BOTTOM = "slider_bottom";
     public static final String BUTTON_EXTRA_KEY_MAPPING = "/sys/devices/virtual/switch/tri-state-key/state";
-    public static final String SLIDER_DEFAULT_VALUE = "4,2,0";
+    public static final String SLIDER_DEFAULT_VALUE = "5,1,0";
     final String KEY_DEVICE_DOZE = "device_doze";
     final String KEY_DEVICE_DOZE_PACKAGE_NAME = "org.lineageos.settings.doze";
     public static final String KEY_PROXI_SWITCH = "proxi";
