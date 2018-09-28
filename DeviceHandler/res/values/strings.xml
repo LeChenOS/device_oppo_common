@@ -31,10 +31,10 @@
     <string name="enable_gestures_title">Enable gestures</string>
     <string name="enable_gestures_summary">Enable screen off gestures</string>
     <string name="gestures_title">Gestures</string>
-    <string name="gesture_arrow_down_title">Arrow down</string>
+    <string name="gesture_arrow_down_title">Arrow up</string>
     <string name="gesture_arrow_left_title">Arrow left</string>
     <string name="gesture_arrow_right_title">Arrow right</string>
-    <string name="gesture_arrow_up_title">Arrow up</string>
+    <string name="gesture_arrow_up_title">Arrow down</string>
     <string name="gesture_circle_title">Circle</string>
     <string name="gesture_double_swipe_title">Double finger swipe down</string>
     <string name="gesture_double_tap_title">Double tap</string>
